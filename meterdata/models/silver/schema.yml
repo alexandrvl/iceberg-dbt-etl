@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: readings__silver
+    description: "Silver layer cleaned readings built from raw.readings"
+    columns:
+      - name: meter_id
+        description: "Meter identifier"
+        data_tests:
+          - not_null
+      - name: interval_start
+        description: "Interval start timestamp"
+        data_tests:
+          - not_null
+      - name: reading_value
+        description: "Reading value"
+        data_tests:
+          - not_null

@@ -1,0 +1,26 @@
+meterdata:
+  outputs:
+
+    dev:
+      type: trino
+      method: none  # optional, one of {none | ldap | kerberos}
+      user: trino
+      password:   # required if method is ldap or kerberos
+      database: iceberg
+      host: localhost
+      port: 8081
+      schema: readings
+      threads: 1
+
+    prod:
+      type: trino
+      method: none  # optional, one of {none | ldap | kerberos}
+      user: trino
+      password:   # required if method is ldap or kerberos
+      database: iceberg
+      host: localhost
+      port: 8081
+      schema: localhost
+      threads: 1
+
+  target: dev

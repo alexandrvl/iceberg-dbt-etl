@@ -1,0 +1,31 @@
+version: 2
+
+sources:
+  - name: raw
+    description: "Raw Iceberg schema containing meter readings"
+    database: iceberg  # Trino catalog name
+    schema: raw        # Iceberg schema (aka database)
+    tables:
+      - name: readings
+        description: "Raw meter interval readings registered in Iceberg (created by load_data.py)"
+        columns:
+          - name: id
+            description: "Surrogate/ingested id"
+          - name: meter_id
+            description: "Meter identifier"
+          - name: reading_value
+            description: "Reading value (Decimal 15,3)"
+          - name: interval_start
+            description: "Start timestamp of interval"
+          - name: interval_end
+            description: "End timestamp of interval"
+          - name: creation_time
+            description: "Ingestion/creation timestamp"
+          - name: reading_type
+            description: "Type of reading"
+          - name: unit_of_measure
+            description: "Unit (e.g., kWh)"
+          - name: quality_code
+            description: "Quality flag/code"
+          - name: status
+            description: "Record status"

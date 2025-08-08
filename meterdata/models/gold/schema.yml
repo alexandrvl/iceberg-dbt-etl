@@ -1,0 +1,15 @@
+version: 2
+
+models:
+  - name: meter_daily_consumption
+    description: "Gold layer: per-meter aggregated daily consumption based on silver readings"
+    columns:
+      - name: meter_id
+        data_tests:
+          - not_null
+      - name: reading_date
+        data_tests:
+          - not_null
+      - name: total_value
+        data_tests:
+          - not_null
