@@ -32,8 +32,15 @@ clean-targets:         # directories to be removed by `dbt clean`
 models:
   meterdata:
     silver:
-      +materialized: table
+      +materialized: incremental
       +schema: silver
+      +unique_key: id
+      +incremental_strategy: merge
+      +table_properties:
+        format: 'parquet'
+      readings__silver:
+        +table_properties:
+          format: 'parquet'
     gold:
       +materialized: table
       +schema: gold
