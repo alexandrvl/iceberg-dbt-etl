@@ -36,10 +36,16 @@ class DatabaseConfig:
 class StateManagerInterface(ABC):
     @abstractmethod
     def get_last_processed_time(self) -> Tuple[str, dict]:
+        """
+        Returns a tuple of (last_end_timestamp_str, full_state_dict).
+        - last_end_timestamp_str should represent the last processed window end boundary used as baseline for next run.
+        - full_state_dict is the raw parsed state for the caller to compute window start/end and to persist updates.
+        """
         pass
 
     @abstractmethod
     def save_state(self, state: dict) -> None:
+        """Persist the provided state atomically to the state store."""
         pass
 
 
@@ -56,7 +62,12 @@ class S3StateManager(StateManagerInterface):
             """).fetchone()
             if result:
                 state = json.loads(result[1])
-                return state.get('readings', '1970-01-01 00:00:00'), state
+                # Handle new window-based state structure with backward compatibility
+                if 'readings_window' in state and 'end' in state['readings_window']:
+                    last_end = state['readings_window']['end']
+                else:
+                    last_end = '1970-01-01 00:00:00'
+                return last_end, state
         except Exception as e:
             logger.warning(f"Could not read state file: {e}")
         return '1970-01-01 00:00:00', {}
@@ -68,7 +79,12 @@ class S3StateManager(StateManagerInterface):
                 COPY (SELECT '{state_json}' as json) TO '{self.state_file}' 
                 (FORMAT CSV, HEADER false, QUOTE '', ESCAPE '')
             """)
-            logger.info(f"State saved successfully to {self.state_file}")
+            version = state.get('version', 1)
+            window = state.get('readings_window')
+            if window:
+                logger.info(f"State saved successfully (v{version}): window [{window['start']}, {window['end']}]")
+            else:
+                logger.info(f"State saved successfully (v{version}): {self.state_file}")
         except Exception as e:
             logger.error(f"Failed to save state: {e}")
             raise
@@ -125,23 +141,23 @@ class DataProcessor:
         self.state_manager = state_manager
         self.config = config
 
-    def get_max_creation_time(self, last_processed_time: str) -> Optional[datetime]:
+    def get_max_creation_time(self, window_start: str) -> Optional[datetime]:
         result = self.connection.execute(f"""
             SELECT MAX(creation_time) FROM raw.meter_data.readings
-            WHERE creation_time > '{last_processed_time}'
+            WHERE creation_time > '{window_start}'
         """).fetchone()
         return result[0] if result and result[0] else None
 
-    def get_creation_dates(self, last_processed_time: str) -> List[datetime]:
+    def get_creation_dates(self, window_start: str, window_end: str) -> List[datetime]:
         results = self.connection.execute(f"""
             SELECT DISTINCT DATE(creation_time) as creation_date
             FROM raw.meter_data.readings
-            WHERE creation_time > '{last_processed_time}'
+            WHERE creation_time > '{window_start}' AND creation_time <= '{window_end}'
             ORDER BY creation_date
         """).fetchall()
         return [row[0] for row in results]
 
-    def export_date_partition(self, date: datetime, last_processed_time: str) -> None:
+    def export_date_partition(self, date: datetime, window_start: str, window_end: str) -> None:
         date_str = date.strftime('%Y-%m-%d')
         output_path = f's3://{self.config.s3_bucket}/readings/date={date_str}/readings.parquet'
 
@@ -150,7 +166,7 @@ class DataProcessor:
         self.connection.execute(f"""
             COPY (
                 SELECT * FROM raw.meter_data.readings
-                WHERE creation_time > '{last_processed_time}'
+                WHERE creation_time > '{window_start}' AND creation_time <= '{window_end}'
                 AND DATE(creation_time) = '{date}'
                 ORDER BY creation_time
             ) TO '{output_path}' (FORMAT PARQUET)
@@ -159,25 +175,40 @@ class DataProcessor:
         logger.info(f"Successfully exported data for {date_str}")
 
     def process_incremental_data(self) -> None:
-        last_processed_time, state = self.state_manager.get_last_processed_time()
-        logger.info(f"Loading data created after: {last_processed_time}")
-
-        max_creation_time = self.get_max_creation_time(last_processed_time)
+        last_end, state = self.state_manager.get_last_processed_time()
+        
+        # Compute window boundaries
+        window_start = last_end
+        logger.info(f"Window start: {window_start}")
+        
+        max_creation_time = self.get_max_creation_time(window_start)
+        window_end = str(max_creation_time)
 
         if max_creation_time is None:
             logger.info("No new data to load")
+            window_end = window_start
+            self._save_state(state, window_end, window_start)
             return
+        
+        logger.info(f"Window end: {window_end}")
+        logger.info(f"Processing window: [{window_start}, {window_end}]")
 
-        creation_dates = self.get_creation_dates(last_processed_time)
+        creation_dates = self.get_creation_dates(window_start, window_end)
+        logger.info(f"Dates to export: {[d.strftime('%Y-%m-%d') for d in creation_dates]}")
 
         for creation_date in creation_dates:
-            self.export_date_partition(creation_date, last_processed_time)
+            self.export_date_partition(creation_date, window_start, window_end)
+        self._save_state(state, window_end, window_start)
 
-        state['readings'] = str(max_creation_time)
+    def _save_state(self, state, window_end, window_start):
+        # Persist window-based state + maintain legacy compatibility
+        state['readings_window'] = {
+            'start': window_start,
+            'end': window_end
+        }
+        state['version'] = 2
         self.state_manager.save_state(state)
-
-        logger.info(f"Updated last processed time to: {max_creation_time}")
-        logger.info(f"Loaded data from {last_processed_time} to {max_creation_time}")
+        logger.info(f"Updated window: start={window_start}, end={window_end}")
 
 
 class ParquetDataLoader:
@@ -255,6 +286,26 @@ class IcebergTableManager:
             logger.error(f"Failed to create iceberg table: {e}")
             raise
 
+    @staticmethod
+    def _get_existing_data_files(table) -> set:
+        """Get set of data file paths already registered in the Iceberg table."""
+        existing_files = set()
+        
+        try:
+            scan = table.scan()
+            for task in scan.plan_files():
+              file = task.file
+              existing_files.add(file.file_path)
+            
+            logger.info(f"Found {len(existing_files)} existing data files in table")
+            return existing_files
+            
+
+        except Exception as error:
+          logger.warning(f"Failed to find files: {error}")
+          # Return empty set to be safe - will re-add files (idempotent)
+          return set()
+
     def run(self, files):
         try:
             # Make all fields optional to match Parquet's nullable columns
@@ -277,10 +328,21 @@ class IcebergTableManager:
             catalog.create_namespace_if_not_exists("raw")
 
             table = self._create_iceberg_table(catalog, "raw", bucket_name, "readings", schema)
-            logger.info(f"Created iceberg table: {table}")
-            logger.info(f"Adding files to table: {files}")
-
-            table.add_files(files)
+            logger.info(f"Loaded iceberg table: {table}")
+            
+            # Get existing files from table metadata
+            existing_files = self._get_existing_data_files(table)
+            
+            # Filter to only new files
+            new_files = [f for f in files if f not in existing_files]
+            
+            logger.info(f"Discovered {len(files)} parquet files, {len(existing_files)} already registered, {len(new_files)} new")
+            
+            if new_files:
+                logger.info(f"Adding {len(new_files)} new files to table: {new_files}")
+                table.add_files(new_files)
+            else:
+                logger.info("No new files to add to table")
 
         except Exception as e:
             logger.error(f"Failed to load iceberg table: {e}")
@@ -303,7 +365,7 @@ class IcebergDataLoader:
                 """).fetchall()
                 files = [row[0] for row in result]
                 self.table_manager.run(files)
-                logger.info(f"Loaded iceberg files: {result}")
+                logger.info(f"Sync for iceberg files: {result}")
 
         except Exception as e:
             logger.error(f"Failed to load iceberg : {e}")
