@@ -1,6 +1,7 @@
 import duckdb
 import json
 import logging
+import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional, List, Tuple
@@ -21,16 +22,16 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DatabaseConfig:
-    postgres_host: str = 'localhost'
-    postgres_port: int = 5432
-    postgres_db: str = 'iceberg_dbt'
-    postgres_user: str = 'dbt_user'
-    postgres_password: str = 'dbt_password'
-    s3_region: str = 'eu-central-1'
-    s3_access_key: str = 'minio_user'
-    s3_secret_key: str = 'minio_password'
-    s3_endpoint: str = '127.0.0.1:9000'
-    s3_bucket: str = 'iceberg-data'
+    postgres_host: str = os.getenv('POSTGRES_HOST', 'localhost')
+    postgres_port: int = int(os.getenv('POSTGRES_PORT', '5432'))
+    postgres_db: str = os.getenv('POSTGRES_DB', 'iceberg_dbt')
+    postgres_user: str = os.getenv('POSTGRES_USER', 'dbt_user')
+    postgres_password: str = os.getenv('POSTGRES_PASSWORD', 'dbt_password')
+    s3_region: str = os.getenv('S3_REGION', 'eu-central-1')
+    s3_access_key: str = os.getenv('S3_ACCESS_KEY', 'minio_user')
+    s3_secret_key: str = os.getenv('S3_SECRET_KEY', 'minio_password')
+    s3_endpoint: str = os.getenv('S3_ENDPOINT', '127.0.0.1:9000')
+    s3_bucket: str = os.getenv('S3_BUCKET', 'iceberg-data')
 
 
 class StateManagerInterface(ABC):

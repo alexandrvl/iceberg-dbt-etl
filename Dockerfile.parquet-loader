@@ -1,0 +1,31 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the main application
+COPY load_data.py .
+
+# Set environment variables with defaults
+ENV POSTGRES_HOST=postgres
+ENV POSTGRES_PORT=5432
+ENV POSTGRES_DB=iceberg_dbt
+ENV POSTGRES_USER=dbt_user
+ENV POSTGRES_PASSWORD=dbt_password
+ENV S3_REGION=eu-central-1
+ENV S3_ACCESS_KEY=minio_user
+ENV S3_SECRET_KEY=minio_password
+ENV S3_ENDPOINT=minio:9000
+ENV S3_BUCKET=iceberg-data
+
+# Run the parquet loader
+CMD ["python", "load_data.py"]

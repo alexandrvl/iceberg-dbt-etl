@@ -15,12 +15,12 @@ meterdata:
     prod:
       type: trino
       method: none  # optional, one of {none | ldap | kerberos}
-      user: trino
-      password:   # required if method is ldap or kerberos
-      database: iceberg
-      host: localhost
-      port: 8081
-      schema: localhost
-      threads: 1
+      user: "{{ env_var('DBT_TRINO_USER', 'trino') }}"
+      password: "{{ env_var('DBT_TRINO_PASSWORD', '') }}"
+      database: "{{ env_var('DBT_TRINO_DATABASE', 'iceberg') }}"
+      host: "{{ env_var('DBT_TRINO_HOST', 'trino') }}"
+      port: "{{ env_var('DBT_TRINO_PORT', '8080') | int }}"
+      schema: "{{ env_var('DBT_TRINO_SCHEMA', 'readings') }}"
+      threads: "{{ env_var('DBT_THREADS', '1') | int }}"
 
-  target: dev
+  target: "{{ env_var('DBT_TARGET', 'dev') }}"
