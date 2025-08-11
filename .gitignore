@@ -205,3 +205,12 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+/.idea/.gitignore
+/.idea/data_source_mapping.xml
+/.idea/dataSources.xml
+/.idea/iceberg-dbt-etl.iml
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/inspectionProfiles/profiles_settings.xml
+/.idea/sqldialects.xml
+/.idea/vcs.xml
