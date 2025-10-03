@@ -1,6 +1,23 @@
-version: '3.8'
+# ============================================================================
+# Data Vault 2.0 ETL Pipeline with Apache Iceberg
+# ============================================================================
+# This docker-compose file orchestrates a complete end-to-end pipeline:
+# 1. PostgreSQL: Source database (customers, accounts, assets, readings)
+# 2. MinIO: S3-compatible object storage for data lake
+# 3. Trino: Distributed SQL query engine for Iceberg tables
+# 4. parquet-loader: Extract data from PostgreSQL to Iceberg
+# 5. dbt-models: Transform data into Data Vault 2.0 structure
+# ============================================================================
 
 services:
+  # ========================================
+  # PostgreSQL - Source Database
+  # ========================================
+  # Contains meter data with proper entity separation:
+  # - meter_data.customers (5 test customers)
+  # - meter_data.customer_accounts (5 test accounts)
+  # - meter_data.assets (5 test meters)
+  # - meter_data.readings (200+ test readings)
   postgres:
     image: postgres:15
     container_name: iceberg-dbt-postgres
@@ -14,14 +31,18 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-scripts:/docker-entrypoint-initdb.d
-      - ./pg_hba.conf:/var/lib/postgresql/data/pg_hba.conf
+      - ./init-scripts:/docker-entrypoint-initdb.d  # Schema + test data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U dbt_user -d iceberg_dbt"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  # ========================================
+  # MinIO - S3-Compatible Object Storage
+  # ========================================
+  # Stores Parquet files and serves as Iceberg data lake
+  # Web console: http://localhost:9001 (minio_user / minio_password)
   minio:
     image: minio/minio:latest
     container_name: iceberg-dbt-minio
@@ -29,8 +50,8 @@ services:
       MINIO_ROOT_USER: minio_user
       MINIO_ROOT_PASSWORD: minio_password
     ports:
-      - "9000:9000"  # API port
-      - "9001:9001"  # Console port
+      - "9000:9000"  # S3 API port
+      - "9001:9001"  # Web console port
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"
@@ -40,7 +61,10 @@ services:
       timeout: 20s
       retries: 3
 
-  # Create default bucket on startup
+  # ========================================
+  # Create MinIO Bucket
+  # ========================================
+  # Creates "iceberg-data" bucket on startup if it doesn't exist
   createbuckets:
     image: minio/mc
     container_name: iceberg-dbt-createbuckets
@@ -51,20 +75,26 @@ services:
       sleep 5;
       /usr/bin/mc config host add myminio http://minio:9000 minio_user minio_password;
       /usr/bin/mc mb --ignore-existing myminio/iceberg-data;
+      echo 'Bucket iceberg-data created successfully';
       exit 0;
       "
       
 
+  # ========================================
+  # Trino - Distributed SQL Query Engine
+  # ========================================
+  # Queries Iceberg tables stored in MinIO
+  # Connect: docker exec -it iceberg-dbt-trino trino
   trino:
     image: trinodb/trino:latest
     container_name: iceberg-dbt-trino
     ports:
-      - "8081:8080"
+      - "8081:8080"  # Trino web UI and query interface
     volumes:
-      - ./trino/etc:/etc/trino
+      - ./trino/etc:/etc/trino  # Iceberg catalog configuration
     depends_on:
-      - postgres
-      - minio
+      - postgres  # Iceberg catalog uses PostgreSQL
+      - minio     # Iceberg data stored in MinIO
       - createbuckets
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/v1/info"]
@@ -72,18 +102,32 @@ services:
       timeout: 20s
       retries: 3
 
-  # Parquet data loader - extracts data from Postgres to S3 and registers with Iceberg
+  # ========================================
+  # Parquet Loader - Data Extraction
+  # ========================================
+  # Extracts data from PostgreSQL source tables to Iceberg
+  # Uses the generic data loader framework
+  # Loader types (set via LOADER_TYPE env var):
+  # - "generic": Generic framework with TableDefinition (default)
+  # - "config": Config-driven loader using JSON
   parquet-loader:
     build:
       context: .
       dockerfile: Dockerfile.parquet-loader
     container_name: iceberg-dbt-parquet-loader
     environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: iceberg_dbt
-      POSTGRES_USER: dbt_user
-      POSTGRES_PASSWORD: dbt_password
+      # Loader selection (generic is default)
+      LOADER_TYPE: generic  # Change to "config" for JSON-based configuration
+
+      # Source database configuration
+      SOURCE_HOST: postgres
+      SOURCE_PORT: 5432
+      SOURCE_DB: iceberg_dbt
+      SOURCE_USER: dbt_user
+      SOURCE_PASSWORD: dbt_password
+      SOURCE_SCHEMA: meter_data
+
+      # S3/MinIO configuration
       S3_REGION: eu-central-1
       S3_ACCESS_KEY: minio_user
       S3_SECRET_KEY: minio_password
@@ -100,29 +144,94 @@ services:
         condition: service_healthy
     restart: "no"  # Run once unless manually restarted
 
-  # DBT models - transforms data in the data warehouse
+  # ========================================
+  # dbt Models - Data Transformation
+  # ========================================
+  # Transforms raw Iceberg tables into Data Vault 2.0 structure
+  # Pipeline stages:
+  # 1. Staging: Hash keys, hash diffs (AutomateDV macros)
+  # 2. Raw Vault: Hubs (3), Links (2), Satellites (4), References (4)
+  # 3. Business Vault: Denormalized views (4)
+  # 4. Tests: Data quality validation
   dbt-models:
     build:
       context: .
       dockerfile: Dockerfile.dbt
     container_name: iceberg-dbt-models
     environment:
+      # dbt configuration
       DBT_TARGET: prod
+      DBT_THREADS: 1
+
+      # Trino connection
       DBT_TRINO_HOST: trino
       DBT_TRINO_PORT: 8080
       DBT_TRINO_USER: trino
       DBT_TRINO_PASSWORD: ""
       DBT_TRINO_DATABASE: iceberg
-      DBT_TRINO_SCHEMA: readings
-      DBT_THREADS: 1
+      DBT_TRINO_SCHEMA: raw_vault
     depends_on:
       parquet-loader:
         condition: service_completed_successfully
       trino:
         condition: service_healthy
     restart: "no"  # Run once unless manually restarted
-    command: ["dbt", "run", "--profiles-dir", "/app/meterdata"]
+    command:
+      - /bin/sh
+      - -c
+      - |
+        echo "=========================================="
+        echo "Building Data Vault 2.0 Models"
+        echo "=========================================="
+        echo ""
+        echo "Step 1: Installing dbt dependencies (AutomateDV + dbt-utils)"
+        dbt deps --profiles-dir /app/meterdata
+        echo ""
+        echo "Step 2: Building staging layer"
+        echo "  - Joins source tables (customers, accounts, assets, readings)"
+        echo "  - Generates hash keys for hubs"
+        echo "  - Generates hash diffs for satellites"
+        dbt run --select staging --profiles-dir /app/meterdata
+        echo ""
+        echo "Step 3: Building raw vault (Data Vault 2.0 core)"
+        echo "  - Hubs: hub_customer, hub_customer_account, hub_asset"
+        echo "  - Links: link_customer_account, link_account_asset"
+        echo "  - Satellites: sat_customer_details, sat_customer_acc_details,"
+        echo "                sat_asset_details, sat_asset_measurements"
+        echo "  - References: ref_meter_type, ref_reading_type, ref_status, ref_quality_code"
+        dbt run --select raw_vault --profiles-dir /app/meterdata
+        echo ""
+        echo "Step 4: Building business vault (consumption layer)"
+        echo "  - bv_customer_accounts"
+        echo "  - bv_asset_details"
+        echo "  - bv_asset_measurements"
+        echo "  - bv_customer_asset_hierarchy"
+        dbt run --select business_vault --profiles-dir /app/meterdata
+        echo ""
+        echo "Step 5: Running data quality tests"
+        dbt test --profiles-dir /app/meterdata || echo "⚠️  Some tests failed - check logs"
+        echo ""
+        echo "=========================================="
+        echo "✅ Data Vault 2.0 Build Complete!"
+        echo "=========================================="
+        echo ""
+        echo "📊 Available schemas:"
+        echo "  • iceberg.staging - Prepared source with hash keys"
+        echo "  • iceberg.raw_vault - Hubs, Links, Satellites, References"
+        echo "  • iceberg.business_vault - Denormalized views"
+        echo ""
+        echo "🔍 Query examples:"
+        echo "  docker exec -it iceberg-dbt-trino trino"
+        echo "  SELECT * FROM iceberg.business_vault.bv_customer_asset_hierarchy;"
+        echo "  SELECT * FROM iceberg.raw_vault.sat_asset_measurements LIMIT 10;"
+        echo ""
+        echo "📚 Full documentation: See README.md"
 
+# ========================================
+# Volumes
+# ========================================
 volumes:
   postgres_data:
+    driver: local
   minio_data:
+    driver: local

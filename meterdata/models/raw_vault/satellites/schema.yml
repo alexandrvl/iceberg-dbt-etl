@@ -1,0 +1,114 @@
+version: 2
+
+models:
+  - name: sat_customer_details
+    description: "Satellite containing customer descriptive data"
+    columns:
+      - name: customer_hk
+        description: "Customer hash key"
+        tests:
+          - not_null
+      - name: customer_hashdiff
+        description: "Hash of payload for change detection"
+        tests:
+          - not_null
+      - name: customer_id
+        description: "Customer business key"
+      - name: load_ts
+        description: "Load timestamp"
+        tests:
+          - not_null
+      - name: record_source
+        description: "Source system identifier"
+        tests:
+          - not_null
+
+  - name: sat_customer_acc_details
+    description: "Satellite containing customer account descriptive data"
+    columns:
+      - name: customer_account_hk
+        description: "Customer account hash key"
+        tests:
+          - not_null
+      - name: customer_account_hashdiff
+        description: "Hash of payload for change detection"
+        tests:
+          - not_null
+      - name: customer_account_id
+        description: "Customer account business key"
+      - name: load_ts
+        description: "Load timestamp"
+        tests:
+          - not_null
+      - name: record_source
+        description: "Source system identifier"
+        tests:
+          - not_null
+
+  - name: sat_asset_details
+    description: "Satellite containing asset descriptive data"
+    columns:
+      - name: asset_hk
+        description: "Asset hash key"
+        tests:
+          - not_null
+      - name: asset_details_hashdiff
+        description: "Hash of payload for change detection"
+        tests:
+          - not_null
+      - name: asset_id
+        description: "Asset business key"
+      - name: asset_type
+        description: "Type of asset (meter type)"
+      - name: installation_date
+        description: "Installation date"
+      - name: asset_status
+        description: "Asset status"
+      - name: load_ts
+        description: "Load timestamp"
+        tests:
+          - not_null
+      - name: record_source
+        description: "Source system identifier"
+        tests:
+          - not_null
+
+  - name: sat_asset_measurements
+    description: "Satellite containing asset measurement data"
+    columns:
+      - name: asset_hk
+        description: "Asset hash key"
+        tests:
+          - not_null
+      - name: asset_measurements_hashdiff
+        description: "Hash of payload for change detection"
+        tests:
+          - not_null
+      - name: reading_id
+        description: "Reading identifier"
+      - name: reading_value
+        description: "Measurement value"
+        tests:
+          - not_null
+      - name: interval_start
+        description: "Interval start timestamp"
+        tests:
+          - not_null
+      - name: interval_end
+        description: "Interval end timestamp"
+      - name: reading_type
+        description: "Type of reading"
+      - name: unit_of_measure
+        description: "Unit of measurement"
+      - name: quality_code
+        description: "Quality code"
+      - name: reading_status
+        description: "Reading status"
+      - name: load_ts
+        description: "Load timestamp"
+        tests:
+          - not_null
+      - name: record_source
+        description: "Source system identifier"
+        tests:
+          - not_null

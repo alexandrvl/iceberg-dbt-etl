@@ -2,17 +2,89 @@ version: 2
 
 sources:
   - name: raw
-    description: "Raw Iceberg schema containing meter readings"
+    description: "Raw Iceberg schema containing source data for Data Vault 2.0"
     database: iceberg  # Trino catalog name
     schema: raw        # Iceberg schema (aka database)
     tables:
+      - name: customers
+        description: "Customer/installation master data"
+        columns:
+          - name: installation_id
+            description: "Customer/installation identifier (PK)"
+          - name: customer_name
+            description: "Customer or company name"
+          - name: customer_type
+            description: "RESIDENTIAL, COMMERCIAL, INDUSTRIAL"
+          - name: address
+            description: "Street address"
+          - name: city
+            description: "City"
+          - name: postal_code
+            description: "Postal/ZIP code"
+          - name: country
+            description: "Country"
+          - name: registration_date
+            description: "Date when customer registered"
+          - name: last_modified
+            description: "Last modification timestamp"
+          - name: status
+            description: "Customer status (ACTIVE, INACTIVE)"
+
+      - name: customer_accounts
+        description: "Customer account information"
+        columns:
+          - name: account_id
+            description: "Account identifier (PK)"
+          - name: installation_id
+            description: "Customer/installation identifier (FK)"
+          - name: account_number
+            description: "Account number"
+          - name: account_type
+            description: "PREPAID, POSTPAID"
+          - name: billing_cycle
+            description: "MONTHLY, QUARTERLY"
+          - name: account_opened_date
+            description: "Date account was opened"
+          - name: account_closed_date
+            description: "Date account was closed (if applicable)"
+          - name: last_modified
+            description: "Last modification timestamp"
+          - name: status
+            description: "Account status (ACTIVE, CLOSED)"
+
+      - name: assets
+        description: "Physical asset (meter) information"
+        columns:
+          - name: asset_id
+            description: "Asset/meter identifier (PK)"
+          - name: account_id
+            description: "Customer account identifier (FK)"
+          - name: asset_serial_number
+            description: "Physical serial number"
+          - name: asset_type
+            description: "ELECTRIC, GAS, WATER"
+          - name: manufacturer
+            description: "Manufacturer name"
+          - name: model
+            description: "Model number"
+          - name: installation_date
+            description: "Installation date"
+          - name: last_calibration_date
+            description: "Last calibration date"
+          - name: next_calibration_date
+            description: "Next scheduled calibration"
+          - name: last_modified
+            description: "Last modification timestamp"
+          - name: status
+            description: "Asset status (ACTIVE, INACTIVE)"
+
       - name: readings
-        description: "Raw meter interval readings registered in Iceberg (created by load_data.py)"
+        description: "Asset measurement readings (fact table)"
         columns:
           - name: id
             description: "Surrogate/ingested id"
-          - name: meter_id
-            description: "Meter identifier"
+          - name: asset_id
+            description: "Asset/meter identifier (FK)"
           - name: reading_value
             description: "Reading value (Decimal 15,3)"
           - name: interval_start
@@ -22,10 +94,12 @@ sources:
           - name: creation_time
             description: "Ingestion/creation timestamp"
           - name: reading_type
-            description: "Type of reading"
+            description: "CONSUMPTION, DEMAND"
           - name: unit_of_measure
-            description: "Unit (e.g., kWh)"
+            description: "Unit (e.g., kWh, m³, L)"
           - name: quality_code
-            description: "Quality flag/code"
+            description: "GOOD, SUSPECT"
           - name: status
-            description: "Record status"
+            description: "VALID, ESTIMATED"
+          - name: source_system
+            description: "Source system identifier"

@@ -1,0 +1,52 @@
+version: 2
+
+models:
+  - name: link_customer_account
+    description: "Link between customer and customer account"
+    columns:
+      - name: link_customer_account_hk
+        description: "Link hash key"
+        tests:
+          - not_null
+          - unique
+      - name: customer_hk
+        description: "Customer hash key"
+        tests:
+          - not_null
+      - name: customer_account_hk
+        description: "Customer account hash key"
+        tests:
+          - not_null
+      - name: load_ts
+        description: "Load timestamp"
+        tests:
+          - not_null
+      - name: record_source
+        description: "Source system identifier"
+        tests:
+          - not_null
+
+  - name: link_account_asset
+    description: "Link between customer account and asset"
+    columns:
+      - name: link_account_asset_hk
+        description: "Link hash key"
+        tests:
+          - not_null
+          - unique
+      - name: customer_account_hk
+        description: "Customer account hash key"
+        tests:
+          - not_null
+      - name: asset_hk
+        description: "Asset hash key"
+        tests:
+          - not_null
+      - name: load_ts
+        description: "Load timestamp"
+        tests:
+          - not_null
+      - name: record_source
+        description: "Source system identifier"
+        tests:
+          - not_null

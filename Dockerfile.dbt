@@ -14,6 +14,11 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy dbt project files
+# This includes:
+# - dbt_project.yml (project configuration)
+# - packages.yml (AutomateDV + dbt-utils)
+# - profiles.yml (Trino connection)
+# - models/ (staging, raw_vault, business_vault)
 COPY meterdata/ ./meterdata/
 
 # Set working directory to dbt project
@@ -22,5 +27,15 @@ WORKDIR /app/meterdata
 # Set environment variables
 ENV DBT_PROFILES_DIR=/app/meterdata
 
-# Default command - can be overridden
-CMD ["dbt", "run"]
+# Environment variables for Trino connection (can be overridden)
+ENV DBT_TARGET=prod
+ENV DBT_TRINO_HOST=trino
+ENV DBT_TRINO_PORT=8080
+ENV DBT_TRINO_USER=trino
+ENV DBT_TRINO_DATABASE=iceberg
+ENV DBT_TRINO_SCHEMA=raw_vault
+ENV DBT_THREADS=1
+
+# Default command - runs full Data Vault 2.0 pipeline
+# Can be overridden in docker-compose.yml or at runtime
+CMD ["dbt", "run", "--profiles-dir", "/app/meterdata"]

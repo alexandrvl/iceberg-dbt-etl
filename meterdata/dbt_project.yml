@@ -22,7 +22,6 @@ clean-targets:         # directories to be removed by `dbt clean`
   - "target"
   - "dbt_packages"
 
-
 # Configuring models
 # Full documentation: https://docs.getdbt.com/docs/configuring-models
 
@@ -31,16 +30,36 @@ clean-targets:         # directories to be removed by `dbt clean`
 # files using the `{{ config(...) }}` macro.
 models:
   meterdata:
-    silver:
-      +materialized: incremental
-      +schema: silver
-      +unique_key: id
-      +incremental_strategy: merge
-      +table_properties:
-        format: 'parquet'
-      readings__silver:
+    # Staging layer: source data preparation with hash keys
+    staging:
+      +materialized: view
+      +schema: staging
+
+    # Raw Vault: Data Vault 2.0 core structures
+    raw_vault:
+      +schema: raw_vault
+      +table_type: iceberg
+      hubs:
+        +materialized: incremental
+        +incremental_strategy: merge
         +table_properties:
           format: 'parquet'
-    gold:
-      +materialized: table
-      +schema: gold
+      links:
+        +materialized: incremental
+        +incremental_strategy: merge
+        +table_properties:
+          format: 'parquet'
+      satellites:
+        +materialized: incremental
+        +incremental_strategy: merge
+        +table_properties:
+          format: 'parquet'
+      references:
+        +materialized: table
+        +table_properties:
+          format: 'parquet'
+
+    # Business Vault: denormalized views for consumption
+    business_vault:
+      +materialized: view
+      +schema: business_vault

@@ -1,0 +1,198 @@
+{
+  "tables": [
+    {
+      "name": "customers",
+      "primary_key": "installation_id",
+      "fields": [
+        {
+          "name": "installation_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "customer_name",
+          "type": "string"
+        },
+        {
+          "name": "customer_type",
+          "type": "string"
+        },
+        {
+          "name": "address",
+          "type": "string"
+        },
+        {
+          "name": "city",
+          "type": "string"
+        },
+        {
+          "name": "postal_code",
+          "type": "string"
+        },
+        {
+          "name": "country",
+          "type": "string"
+        },
+        {
+          "name": "registration_date",
+          "type": "timestamp"
+        },
+        {
+          "name": "last_modified",
+          "type": "timestamp"
+        },
+        {
+          "name": "status",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "customer_accounts",
+      "primary_key": "account_id",
+      "fields": [
+        {
+          "name": "account_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "installation_id",
+          "type": "string"
+        },
+        {
+          "name": "account_number",
+          "type": "string"
+        },
+        {
+          "name": "account_type",
+          "type": "string"
+        },
+        {
+          "name": "billing_cycle",
+          "type": "string"
+        },
+        {
+          "name": "account_opened_date",
+          "type": "timestamp"
+        },
+        {
+          "name": "account_closed_date",
+          "type": "timestamp"
+        },
+        {
+          "name": "last_modified",
+          "type": "timestamp"
+        },
+        {
+          "name": "status",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "assets",
+      "primary_key": "asset_id",
+      "fields": [
+        {
+          "name": "asset_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "account_id",
+          "type": "string"
+        },
+        {
+          "name": "asset_serial_number",
+          "type": "string"
+        },
+        {
+          "name": "asset_type",
+          "type": "string"
+        },
+        {
+          "name": "manufacturer",
+          "type": "string"
+        },
+        {
+          "name": "model",
+          "type": "string"
+        },
+        {
+          "name": "installation_date",
+          "type": "timestamp"
+        },
+        {
+          "name": "last_calibration_date",
+          "type": "timestamp"
+        },
+        {
+          "name": "next_calibration_date",
+          "type": "timestamp"
+        },
+        {
+          "name": "last_modified",
+          "type": "timestamp"
+        },
+        {
+          "name": "status",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "readings",
+      "is_incremental": true,
+      "incremental_field": "creation_time",
+      "fields": [
+        {
+          "name": "id",
+          "type": "integer"
+        },
+        {
+          "name": "asset_id",
+          "type": "string"
+        },
+        {
+          "name": "reading_value",
+          "type": "decimal",
+          "precision": 15,
+          "scale": 3
+        },
+        {
+          "name": "interval_start",
+          "type": "timestamp"
+        },
+        {
+          "name": "interval_end",
+          "type": "timestamp"
+        },
+        {
+          "name": "creation_time",
+          "type": "timestamp"
+        },
+        {
+          "name": "reading_type",
+          "type": "string"
+        },
+        {
+          "name": "unit_of_measure",
+          "type": "string"
+        },
+        {
+          "name": "quality_code",
+          "type": "string"
+        },
+        {
+          "name": "status",
+          "type": "string"
+        },
+        {
+          "name": "source_system",
+          "type": "string"
+        }
+      ]
+    }
+  ]
+}
