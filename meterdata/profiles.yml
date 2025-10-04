@@ -4,13 +4,15 @@ meterdata:
     dev:
       type: trino
       method: none  # optional, one of {none | ldap | kerberos}
-      user: trino
-      password:   # required if method is ldap or kerberos
-      database: iceberg
-      host: localhost
-      port: 8081
-      schema: readings
-      threads: 1
+      user: "{{ env_var('DBT_TRINO_USER', 'trino') }}"
+      password: "{{ env_var('DBT_TRINO_PASSWORD', '') }}"
+      database: "{{ env_var('DBT_TRINO_DATABASE', 'iceberg') }}"
+      host: "{{ env_var('DBT_TRINO_HOST', 'localhost') }}"
+      port: "{{ env_var('DBT_TRINO_PORT', '8081') | int }}"
+      schema: "{{ env_var('DBT_TRINO_SCHEMA', 'raw_vault') }}"
+      threads: "{{ env_var('DBT_THREADS', '4') | int }}"
+      http_scheme: "{{ env_var('DBT_TRINO_HTTP_SCHEME', 'http') }}"
+      retries: 3
 
     prod:
       type: trino
@@ -20,7 +22,7 @@ meterdata:
       database: "{{ env_var('DBT_TRINO_DATABASE', 'iceberg') }}"
       host: "{{ env_var('DBT_TRINO_HOST', 'trino') }}"
       port: "{{ env_var('DBT_TRINO_PORT', '8080') | int }}"
-      schema: "{{ env_var('DBT_TRINO_SCHEMA', 'readings') }}"
-      threads: "{{ env_var('DBT_THREADS', '1') | int }}"
+      schema: "{{ env_var('DBT_TRINO_SCHEMA', 'raw_vault') }}"
+      threads: "{{ env_var('DBT_THREADS', '4') | int }}"
 
   target: "{{ env_var('DBT_TARGET', 'dev') }}"
