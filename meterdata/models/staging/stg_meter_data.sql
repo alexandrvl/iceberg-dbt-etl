@@ -102,10 +102,10 @@ select
     account_id as customer_account_id,
     asset_id,
 
-    -- Hash Keys for Hubs
-    {{ hash_key(['installation_id']) }} as customer_hk,
-    {{ hash_key(['account_id']) }} as customer_account_hk,
-    {{ hash_key(['asset_id']) }} as asset_hk,
+    -- Natural Keys for Hubs
+    installation_id as customer_hk,
+    account_id as customer_account_hk,
+    asset_id as asset_hk,
 
     -- Hash Keys for Links
     {{ hash_key(['installation_id', 'account_id']) }} as link_customer_account_hk,
@@ -115,7 +115,6 @@ select
     {{ hash_diff(['customer_name', 'customer_type', 'address', 'city', 'postal_code', 'country', 'customer_status']) }} as customer_hashdiff,
     {{ hash_diff(['account_number', 'account_type', 'billing_cycle', 'account_status']) }} as customer_account_hashdiff,
     {{ hash_diff(['asset_serial_number', 'asset_type', 'manufacturer', 'model', 'asset_installation_date', 'asset_status']) }} as asset_details_hashdiff,
-    {{ hash_diff(['reading_value', 'interval_start', 'interval_end', 'reading_type', 'unit_of_measure', 'quality_code', 'reading_status']) }} as asset_measurements_hashdiff,
 
     -- Customer Details (Satellite Payload)
     customer_name,

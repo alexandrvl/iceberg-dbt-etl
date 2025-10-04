@@ -80,10 +80,6 @@ models:
         description: "Asset hash key"
         tests:
           - not_null
-      - name: asset_measurements_hashdiff
-        description: "Hash of payload for change detection"
-        tests:
-          - not_null
       - name: reading_id
         description: "Reading identifier"
       - name: reading_value

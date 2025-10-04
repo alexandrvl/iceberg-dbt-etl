@@ -3,7 +3,7 @@
     materialized='incremental',
     table_type='iceberg',
     schema='raw_vault',
-    unique_key=['asset_hk', 'load_ts'],
+    unique_key=['asset_hk', 'interval_start', 'interval_end', 'reading_type', 'load_ts'],
     incremental_strategy='merge',
     properties={
       "format": "'PARQUET'",
@@ -13,11 +13,11 @@
 }}
 
 {# Satellite: Asset Measurements - Time-series measurement data for assets #}
+{# Uniqueness: asset_hk + interval_start + interval_end + reading_type + load_ts #}
 
 WITH source AS (
     SELECT
         asset_hk,
-        asset_measurements_hashdiff,
         reading_id,
         reading_value,
         interval_start,
@@ -33,27 +33,25 @@ WITH source AS (
 )
 
 {% if is_incremental() %}
-, ranked_records AS (
+, existing_measurements AS (
     SELECT
         asset_hk,
-        asset_measurements_hashdiff,
-        ROW_NUMBER() OVER (PARTITION BY asset_hk ORDER BY load_ts DESC) as rn
+        interval_start,
+        interval_end,
+        reading_type,
+        load_ts
     FROM {{ this }}
-)
-, latest_records AS (
-    SELECT
-        asset_hk,
-        asset_measurements_hashdiff
-    FROM ranked_records
-    WHERE rn = 1
 )
 , records_to_insert AS (
     SELECT s.*
     FROM source s
-    LEFT JOIN latest_records l
-        ON s.asset_hk = l.asset_hk
-       AND s.asset_measurements_hashdiff = l.asset_measurements_hashdiff
-    WHERE l.asset_hk IS NULL  -- New or changed records
+    LEFT JOIN existing_measurements e
+        ON s.asset_hk = e.asset_hk
+       AND s.interval_start = e.interval_start
+       AND s.interval_end = e.interval_end
+       AND s.reading_type = e.reading_type
+       AND s.load_ts = e.load_ts
+    WHERE e.asset_hk IS NULL  -- Only new measurements
 )
 SELECT * FROM records_to_insert
 {% else %}
