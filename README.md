@@ -1,10 +1,10 @@
 # Data Vault 2.0 ETL Pipeline with Apache Iceberg
 
-> Complete end-to-end ETL pipeline implementing Data Vault 2.0 methodology with Apache Iceberg, dbt, and AutomateDV
+> Complete end-to-end ETL pipeline implementing Data Vault 2.0 methodology with Apache Iceberg and dbt
 
 [![Data Vault 2.0](https://img.shields.io/badge/Data%20Vault-2.0-blue)]()
 [![Apache Iceberg](https://img.shields.io/badge/Apache-Iceberg-orange)]()
-[![dbt](https://img.shields.io/badge/dbt-AutomateDV-green)]()
+[![dbt](https://img.shields.io/badge/dbt-dbt--core-green)]()
 
 ---
 
@@ -139,7 +139,7 @@ This project demonstrates a production-ready ETL pipeline featuring:
 | **Object Storage** | MinIO (S3-compatible) | Data lake storage |
 | **Table Format** | Apache Iceberg | ACID transactions, time travel, schema evolution |
 | **Query Engine** | Trino | Distributed SQL queries |
-| **Transformation** | dbt + AutomateDV | Data Vault 2.0 transformations |
+| **Transformation** | dbt | Data Vault 2.0 transformations |
 | **Data Loading** | Python + DuckDB + PyIceberg | Generic, reusable extraction framework |
 | **Orchestration** | Docker Compose | Local development environment |
 
@@ -179,8 +179,8 @@ This project demonstrates a production-ready ETL pipeline featuring:
 │  • iceberg.raw.readings                                      │
 └────────────────────────┬────────────────────────────────────┘
                          │
-                         │ dbt + Trino + AutomateDV
-                         ▼
+                          │ dbt + Trino
+                          ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                  Data Vault 2.0 Structure                    │
 ├─────────────────────────────────────────────────────────────┤
@@ -219,7 +219,7 @@ This project demonstrates a production-ready ETL pipeline featuring:
 ✅ **Insert-only pattern** - No updates or deletes
 ✅ **Load timestamp tracking** - `load_ts` on all entities
 ✅ **Source system tracking** - `record_source` for lineage
-✅ **Hash keys** - MD5 hashes of business keys (AutomateDV)
+✅ **Hash keys** - MD5 hashes of business keys (dbt macros)
 ✅ **Hash diffs** - Change detection in satellites
 ✅ **Proper entity separation** - Customers, Accounts, Assets
 ✅ **Incremental loading** - State-based watermarks
@@ -341,7 +341,7 @@ iceberg-dbt-etl/
 │
 ├── meterdata/                     📊 dbt project
 │   ├── dbt_project.yml           # dbt configuration
-│   ├── packages.yml              # AutomateDV + dbt-utils
+│   ├── packages.yml              # dbt-utils
 │   ├── profiles.yml              # Trino connection
 │   │
 │   └── models/
@@ -856,7 +856,6 @@ docker compose logs -f
 
 ### Documentation
 - [Data Vault 2.0 Standards](https://datavaultalliance.com/)
-- [AutomateDV Documentation](https://automate-dv.readthedocs.io/)
 - [Apache Iceberg Documentation](https://iceberg.apache.org/)
 - [dbt Documentation](https://docs.getdbt.com/)
 - [Trino Documentation](https://trino.io/docs/)
@@ -866,7 +865,6 @@ docker compose logs -f
 - [PyIceberg](https://py.iceberg.apache.org/) - Python client for Iceberg
 - [dbt-trino](https://github.com/starburstdata/dbt-trino) - dbt adapter for Trino
 - [dbt-utils](https://github.com/dbt-labs/dbt-utils) - Utility macros
-- [AutomateDV](https://github.com/Datavault-UK/automate-dv) - Data Vault automation
 
 ### Project Files
 - **README.md** - This file - complete documentation

@@ -16,7 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy dbt project files
 # This includes:
 # - dbt_project.yml (project configuration)
-# - packages.yml (AutomateDV + dbt-utils)
+# - packages.yml (dbt-utils)
 # - profiles.yml (Trino connection)
 # - models/ (staging, raw_vault, business_vault)
 COPY meterdata/ ./meterdata/

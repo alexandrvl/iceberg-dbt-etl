@@ -149,7 +149,7 @@ services:
   # ========================================
   # Transforms raw Iceberg tables into Data Vault 2.0 structure
   # Pipeline stages:
-  # 1. Staging: Hash keys, hash diffs (AutomateDV macros)
+  # 1. Staging: Hash keys, hash diffs
   # 2. Raw Vault: Hubs (3), Links (2), Satellites (4), References (4)
   # 3. Business Vault: Denormalized views (4)
   # 4. Tests: Data quality validation
@@ -184,7 +184,7 @@ services:
         echo "Building Data Vault 2.0 Models"
         echo "=========================================="
         echo ""
-        echo "Step 1: Installing dbt dependencies (AutomateDV + dbt-utils)"
+        echo "Step 1: Installing dbt dependencies (dbt-utils)"
         dbt deps --profiles-dir /app/meterdata
         echo ""
         echo "Step 2: Building staging layer"
